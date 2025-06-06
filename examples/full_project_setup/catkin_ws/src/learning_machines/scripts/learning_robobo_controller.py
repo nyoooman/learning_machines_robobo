@@ -2,7 +2,7 @@
 import sys
 
 from robobo_interface import SimulationRobobo, HardwareRobobo
-from learning_machines import run_all_actions
+from learning_machines import run_all_actions, turn_right, turn_around
 
 
 if __name__ == "__main__":
@@ -19,4 +19,10 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"{sys.argv[1]} is not a valid argument.")
 
-    run_all_actions(rob)
+    turn = False
+
+    if turn == True:
+        turn_right(rob)
+
+    else:
+        turn_around(rob)
