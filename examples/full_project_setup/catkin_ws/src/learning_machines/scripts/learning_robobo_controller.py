@@ -1,28 +1,110 @@
 #!/usr/bin/env python3
 import sys
+import numpy as np
+import time
 
 from robobo_interface import SimulationRobobo, HardwareRobobo
-from learning_machines import run_all_actions, turn_right, turn_around
+from lmt1 import ObstacleAvoidanceAgent, run_training_episode
 
+def run_demo_episode(rob, agent):
+    """Run a single episode using the trained agent without exploration (epsilon=0.0)."""
+    epsilon = 0.0
+    reward = run_training_episode(rob, agent, epsilon)
+    print(f"Demo episode finished | Reward: {reward:.2f}")
 
 if __name__ == "__main__":
-    # You can do better argument parsing than this!
-    if len(sys.argv) < 2:
+    args = sys.argv[1:]
+    if not args:
         raise ValueError(
-            """To run, we need to know if we are running on hardware of simulation
-            Pass `--hardware` or `--simulation` to specify."""
+            """Usage:
+            --simulation [id]
+            --hardware
+            --demo --sim [id]
+            --demo --hardware"""
         )
-    elif sys.argv[1] == "--hardware":
+
+    mode = None
+    is_demo = False
+    identifier = 0
+
+    # Parse arguments
+    if "--demo" in args:
+        is_demo = True
+        mode = "hardware" if "--hardware" in args else "simulation"
+        if mode == "simulation":
+            try:
+                # identifier = int(args[args.index("--sim") + 1])
+                identifier = 1
+            except (ValueError, IndexError):
+                identifier = 0
+    elif "--simulation" in args:
+        mode = "simulation"
+        try:
+            identifier = int(args[args.index("--simulation") + 1])
+        except (ValueError, IndexError):
+            identifier = 0
+    elif "--hardware" in args:
+        mode = "hardware"
+    else:
+        raise ValueError("Invalid arguments.")
+
+    # Consistent model/reward paths
+    model_path = f"/root/results/task1_dqn_robobo2.pth"
+    rewards_path = f"/root/results/rewards_task1_robobo{identifier}.npy"
+
+    # Initialize robot
+    if mode == "simulation":
+        rob = SimulationRobobo(identifier=identifier)
+        print(f"Running SimulationRobobo with identifier {identifier}")
+    elif mode == "hardware":
         rob = HardwareRobobo(camera=True)
-    elif sys.argv[1] == "--simulation":
-        rob = SimulationRobobo()
-    else:
-        raise ValueError(f"{sys.argv[1]} is not a valid argument.")
+        print("Running on Hardware")
 
-    turn = False
+    # === DEMO MODE ===
+    if is_demo:
+        agent = ObstacleAvoidanceAgent()
+        agent.load_model(model_path)
+        run_demo_episode(rob, agent)
+        sys.exit(0)
 
-    if turn == True:
-        turn_right(rob)
+    # === TRAINING MODE ===
+    if isinstance(rob, SimulationRobobo):
+        agent = ObstacleAvoidanceAgent()
+        num_episodes = 200
+        episode_rewards = []
 
-    else:
-        turn_around(rob)
+        for episode in range(num_episodes):
+            epsilon = max(0.01, 0.95 * (0.995 ** episode))
+            reward = run_training_episode(rob, agent, epsilon)
+            print(f"Episode {episode+1}/{num_episodes} | Epsilon: {epsilon:.2f} | Reward: {reward:.2f}")
+            episode_rewards.append(reward)
+
+    # === HYBRID MODE ===
+    if isinstance(rob, HardwareRobobo):
+        agent = ObstacleAvoidanceAgent()
+        agent.load_model(model_path)
+        num_episodes = 50
+        episode_rewards = []
+
+        for episode in range(num_episodes):
+            # Linearly decreasing epsilon from 0.2 to 0.1
+            epsilon = max(0.01, 0.25 * (1 - (episode / num_episodes)))
+
+            # Prompt user to confirm robot reset
+            print(f"Episode {episode + 1}/{num_episodes}: Resetting robot...")
+            time.sleep(5)  # Wait 10 seconds before continuing
+
+            # Run training
+            reward = run_training_episode(rob, agent, epsilon)
+            print(f"Episode {episode+1}/{num_episodes} | Epsilon: {epsilon:.2f} | Reward: {reward:.2f}")
+            episode_rewards.append(reward)
+
+    # Optional summary
+    avg_reward = sum(episode_rewards) / num_episodes
+    print(f"Training complete. Average reward over {num_episodes} episodes: {avg_reward:.2f}")
+    # Save model and rewards once, after training
+    agent.save_model(model_path)
+    print(f"Training complete. Model saved to {model_path}")
+
+    np.save(rewards_path, episode_rewards)
+    print(f"Rewards saved to {rewards_path}")
