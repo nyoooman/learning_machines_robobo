@@ -60,14 +60,14 @@ if __name__ == "__main__":
         rob = HardwareRobobo(camera=True)
         print("Running on Hardware")
 
-    # === DEMO MODE ===
+    # demo
     if is_demo:
         agent = ObstacleAvoidanceAgent()
         agent.load_model(model_path)
         run_demo_episode(rob, agent)
         sys.exit(0)
 
-    # === TRAINING MODE ===
+    # training 
     if isinstance(rob, SimulationRobobo):
         agent = ObstacleAvoidanceAgent()
         num_episodes = 200
@@ -79,7 +79,7 @@ if __name__ == "__main__":
             print(f"Episode {episode+1}/{num_episodes} | Epsilon: {epsilon:.2f} | Reward: {reward:.2f}")
             episode_rewards.append(reward)
 
-    # === HYBRID MODE ===
+    # hybrid TODO
     if isinstance(rob, HardwareRobobo):
         agent = ObstacleAvoidanceAgent()
         agent.load_model(model_path)
@@ -87,22 +87,18 @@ if __name__ == "__main__":
         episode_rewards = []
 
         for episode in range(num_episodes):
-            # Linearly decreasing epsilon from 0.2 to 0.1
             epsilon = max(0.01, 0.25 * (1 - (episode / num_episodes)))
-
-            # Prompt user to confirm robot reset
             print(f"Episode {episode + 1}/{num_episodes}: Resetting robot...")
-            time.sleep(5)  # Wait 10 seconds before continuing
+            time.sleep(5)
 
             # Run training
             reward = run_training_episode(rob, agent, epsilon)
             print(f"Episode {episode+1}/{num_episodes} | Epsilon: {epsilon:.2f} | Reward: {reward:.2f}")
             episode_rewards.append(reward)
 
-    # Optional summary
     avg_reward = sum(episode_rewards) / num_episodes
     print(f"Training complete. Average reward over {num_episodes} episodes: {avg_reward:.2f}")
-    # Save model and rewards once, after training
+    # Save model
     agent.save_model(model_path)
     print(f"Training complete. Model saved to {model_path}")
 
