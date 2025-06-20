@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from collections import deque
 
-from robobo_interface import SimulationRobobo, HardwareRobobo
+from robobo_interface import IRobobo, SimulationRobobo, HardwareRobobo
 
 # Hyperparameters
 LEARNING_RATE = 0.001
@@ -15,9 +15,9 @@ REPLAY_MEMORY_SIZE = 10000
 TARGET_UPDATE_FREQ = 10
 
 NUM_ACTIONS = 3  # forward, left, right
-OBSERVATION_SPACE = 5 
+OBSERVATION_SPACE = 5  # FrontLL, FrontL, FrontC, FrontR, FrontRR
 
-# IR thresholds 
+# Individual IR sensor thresholds (FrontLL to FrontRR)
 THRESHOLD_COLLISION = [160, 170, 180, 170, 160]
 THRESHOLD_NEAR =      [90, 95, 100, 95, 90]
 
@@ -72,7 +72,6 @@ class ObstacleAvoidanceAgent:
         dones = torch.FloatTensor(dones)
 
         q_values = self.policy_net(states).gather(1, actions).squeeze()
-        
         next_q_values = self.target_net(next_states).max(1)[0]
         expected_q_values = rewards + GAMMA * next_q_values * (1 - dones)
 
@@ -93,7 +92,7 @@ class ObstacleAvoidanceAgent:
         self.policy_net.load_state_dict(torch.load(path))
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
-def run_training_episode(rob: SimulationRobobo, agent: ObstacleAvoidanceAgent, epsilon: float):
+def run_avoidance_training(rob: IRobobo, agent: ObstacleAvoidanceAgent, epsilon: float):
     if isinstance(rob, SimulationRobobo):
         rob.play_simulation()
 
@@ -105,7 +104,8 @@ def run_training_episode(rob: SimulationRobobo, agent: ObstacleAvoidanceAgent, e
 
     while not done and step_count < max_steps:
         step_count += 1
-        
+
+        # === Read state ===
         irs = rob.read_irs()
         state_raw = [irs[7], irs[3], irs[4], irs[5], irs[6]]
         state = np.array(state_raw) / 200.0

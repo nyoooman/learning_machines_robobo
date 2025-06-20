@@ -496,3 +496,6 @@ class HardwareRobobo(IRobobo):
         self._robot_battery_val = ros_data.data
         if ros_data.data < 10:
             self._logger(f"Robot battery is getting low: {ros_data.data}%")
+
+    def get_nr_food_collected(self) -> int:
+        return 0
