@@ -94,8 +94,8 @@ class ForagingAgent:
 def detect_green_percentage(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     # Simulation RGB range
-        lower_green = np.array([0, 50, 50])
-        upper_green = np.array([80, 255, 255])
+    lower_green = np.array([0, 50, 50])
+    upper_green = np.array([80, 255, 255])
 
     # # Hardware RGB range
     #     lower_green = np.array([20, 70, 70])
@@ -108,7 +108,7 @@ def run_foraging_training(rob: IRobobo, agent: ForagingAgent, epsilon: float):
     if isinstance(rob, SimulationRobobo):
         rob.play_simulation()
 
-    rob.set_phone_tilt(95, 50)
+    rob.set_phone_tilt(140, 50)
     
     total_reward = 0.0
     step_count = 0

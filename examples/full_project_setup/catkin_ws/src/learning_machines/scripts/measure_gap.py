@@ -3,6 +3,7 @@ import time
 
 from robobo_interface import IRobobo, SimulationRobobo, HardwareRobobo
 from lmt2 import detect_green_percentage
+from lmt3 import detect_colored_regions
 
 def sensor_gap(rob: IRobobo):
     # determine robobo instance and start simulation if necessary
@@ -52,27 +53,23 @@ def camera_gap(rob: IRobobo):
         rob.play_simulation()
 
     # set phone to tilt at different angles
-    rob.set_phone_tilt(95, 50)
+    rob.set_phone_tilt_blocking(109, 100)
 
-    for i in range(20):
+    for i in range(10):
         # give camera time to start
-        time.sleep(1)
+        rob.move_blocking(-80,40,200)
 
         # take image and save image
         image = rob.read_image_front()
-        cv2.imwrite(f"/root/results/images/HardwarePOV.jpg", image)
-        print("Image saved successfully.")
 
         # determine percentage
-        p_green = detect_green_percentage(image)
-        print(p_green)
-    
-    # image = rob.read_image_front()
-    # p_green = detect_green_percentage(image)
-    # print(p_green)
+        green_zones = detect_colored_regions(image, "g")
+        red_zones = detect_colored_regions(image,"r")
+        print(f"Green: {green_zones}, Red: {red_zones}")
 
-    # cv2.imwrite("/root/results/images/RoboBOV.jpg", image)
-    # print("Image saved successfully.")
+        cv2.imwrite(f"/root/results/images/SimulationPOV{i}.jpg", image)
+        print("Image saved successfully.")
+
 
     if isinstance(rob, SimulationRobobo):
         rob.stop_simulation()
